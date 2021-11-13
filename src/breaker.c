@@ -13,21 +13,32 @@ unsigned long cmp = 0;
 
 int carry(char * tab, int i, char first_char, char last_char)
 {
-    if(!i) return 0;
+    if(!i)
+        return 0;
     else if(tab[i - 1] < last_char)
     {
-        tab[i - 1] = (char) (tab[i - 1] + 1);
+        #pragma omp atomic
+            ++tab[i - 1];
         return 1;
     }
 
+    int x;
     tab[i - 1] = first_char;
-    return carry(tab, i - 1, first_char, last_char);
+    #pragma omp parallel
+    {
+        #pragma omp single nowait
+            #pragma omp task shared(x)
+                x = carry(tab, i - 1, first_char, last_char);
+    }
+    return x;
 }
 
 
 int search_one(char * crypted, char * tab)
 {
-    cmp++;
+    #pragma omp atomic
+        cmp++;
+
     if(!strcmp(crypted, crypt(tab, "pepper")))
     {
         printf("password found: %s\n", tab);
@@ -39,26 +50,32 @@ int search_one(char * crypted, char * tab)
 
 void search_all(char * crypted, int length, char first_char, char last_char)
 {
-    int i, loop = 1;
+    int i;
     char * tab = (char *) malloc(length + 1);
-    for(i=0; i < length; i++) tab[i] = first_char;
+
+    #pragma omp for
+        for(i=0; i < length; ++i) tab[i] = first_char;
 
     tab[length] = '\0';
     puts("let's break it...");
-    loop = !search_one(crypted, tab);
+
+    int loop = !search_one(crypted, tab);
     i = length - 1;
+
     while(loop)
     {
         if(tab[i] < last_char)
         {
-            tab[i] = (char) (tab[i] + 1);
+            ++tab[i];
             loop = !search_one(crypted, tab);
         }
         else
         {
             tab[i] = first_char;
-            if((loop = carry(tab, i, first_char, last_char)))
-                loop = !search_one(crypted, tab);
+            #pragma omp parallel shared(loop) if(loop)
+                #pragma omp single
+                    loop = carry(tab, i, first_char, last_char);
+            if (loop) loop = !search_one(crypted, tab);
         }
     }
 }
