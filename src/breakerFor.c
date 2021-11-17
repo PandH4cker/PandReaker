@@ -15,7 +15,7 @@ int search_all(char * crypted, int length, char first_char, char last_char)
     int cryptlen = strlen(crypted);
     int max_iter = (int) powl(loop_size, length);
     char tab[length];
-    tab[length]='\0';
+    tab[length] = '\0';
 
     for(int i = 0; i < length; ++i) tab[i] = first_char;
 
@@ -25,27 +25,40 @@ int search_all(char * crypted, int length, char first_char, char last_char)
     int ret = -1;
     printf("max_iter = %lu \n", (unsigned long) max_iter);
 
-    #pragma omp parallel for shared(tab, data, ret) \
-                private(max_iter, crypted, last_char, first_char, length) default(none)
-    for(int i = 0; i < max_iter; ++i)
+    #pragma omp parallel private(data) shared(tab, ret) \
+                firstprivate(max_iter, crypted, last_char, first_char, length, cryptlen) default(none)
     {
-        if(!strcmp(crypted, crypt_r(tab, "salt", &data)))
+        #pragma omp for
+        for(int i = 0; i < max_iter; ++i)
         {
-            printf("password found: %s\n", tab);
-            ret = i;
-        }
-
-        #pragma omp atomic update
-            ++tab[0];
-        for(int j = 0; j < length - 1; ++j)
-        {
-            if(last_char == tab[j])
+            if (ret != -1)
             {
-                tab[j] = first_char;
-                #pragma omp atomic update
-                    ++tab[j + 1];
+                #pragma omp cancel for
+            }
+
+            #pragma omp critical
+            {
+                if(!strncmp(crypted, crypt_r(tab, "salt", &data), cryptlen))
+                {
+                    printf("password found: %s\n", tab);
+                    ret = i;
+                }
+            }
+
+            #pragma omp atomic
+                ++tab[0];
+
+            for(int j = 0; j < length - 1; ++j)
+            {
+                if(last_char == tab[j])
+                {
+                    tab[j] = first_char;
+                    #pragma omp atomic
+                        ++tab[j + 1];
+                }
             }
         }
+        #pragma omp cancel parallel
     }
-    return 0;
+    return ret;
 }
