@@ -13,7 +13,7 @@ int main(int argc, char ** argv) {
     char first_char, last_char;
     int cmp;
 
-    if( argc == 1 ) {
+    if(argc == 1) {
         password = "GHIJ";
         first_char = 65;
         last_char = 90;
@@ -26,7 +26,7 @@ int main(int argc, char ** argv) {
          * letters lowercase: 	97 to 122
          * special characters: 	123 to 126
          * */
-    } else if( argc == 4 ) {
+    } else if(argc == 4) {
         password = argv[1];
         first_char = atoi(argv[2]);
         last_char = atoi(argv[3]);
