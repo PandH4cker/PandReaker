@@ -14,9 +14,9 @@ int main(int argc, char ** argv) {
     int cmp;
 
     if(argc == 1) {
-        password = "GHIJ";
-        first_char = 65;
-        last_char = 90;
+        password = "A$4c";
+        first_char = 32;
+        last_char = 126;
         /* ---ASCII values---
          * special characters: 	32 to 47
          * numbers: 		48 to 57
